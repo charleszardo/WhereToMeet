@@ -33,6 +33,12 @@
   </head>
   <body>
     <div id="floating-panel">
+      <select id="transit-type">
+        <option value="DRIVING">Driving</option>
+        <option value="BICYCLING">Bicycling</option>
+        <option value="TRANSIT">Transit</option>
+        <option value="WALKING">Walking</option>
+      </select>
     <b>Start: </b>
     <input id="start">
     </input>
@@ -63,7 +69,7 @@
         directionsService.route({
           origin: document.getElementById('start').value,
           destination: document.getElementById('end').value,
-          travelMode: 'DRIVING'
+          travelMode: document.getElementById('transit-type').value
         }, function(response, status) {
           console.log(response)
           if (status === 'OK') {
