@@ -1,6 +1,7 @@
+let markerArray = [];
+
 function initMap() {
-  let markerArray = [],
-      directionsService = new google.maps.DirectionsService,
+  let directionsService = new google.maps.DirectionsService,
       map = new google.maps.Map(document.getElementById('map'), {
         zoom: 5,
         center: {lat: 40.771, lng: -73.974}
@@ -10,14 +11,32 @@ function initMap() {
 
   function onChangeHandler() {
     calculateAndDisplayRoute(
-      directionsDisplay, directionsService, markerArray, stepDisplay, map);
+      directionsDisplay, directionsService, stepDisplay, map);
   }
 
   document.getElementById('search-button')
     .addEventListener('click', onChangeHandler);
 }
 
-function calculateAndDisplayRoute(directionsDisplay, directionsService, markerArray, stepDisplay, map) {
+function handleSuccess(response, directionsDisplay, stepDisplay, map) {
+  let warningMarkup =
+  document.getElementById('warnings-panel').innerHTML =
+    `<b>${response.routes[0].warnings}</b>`;
+  directionsDisplay.setDirections(response);
+
+  let allRoutes = response.routes,
+      viableRoutes = getViableRoutes(allRoutes);
+
+  viableRoutes.forEach(route => {
+    let polyline = createPolyline(route, map);
+
+    computeTotalDistance(route, polyline, map);
+  });
+
+  showSteps(response, stepDisplay, map);
+}
+
+function calculateAndDisplayRoute(directionsDisplay, directionsService, stepDisplay, map) {
   // remove any existing markers from the map
   for (var i = 0; i < markerArray.length; i++) {
     markerArray[i].setMap(null);
@@ -33,16 +52,7 @@ function calculateAndDisplayRoute(directionsDisplay, directionsService, markerAr
     // Route the directions and pass the response to a function to create
     // markers for each step.
     if (status === 'OK') {
-      document.getElementById('warnings-panel').innerHTML =
-          '<b>' + response.routes[0].warnings + '</b>';
-      directionsDisplay.setDirections(response);
-
-      let allRoutes = response.routes,
-          polyline = createPolyline(response.routes[0], map),
-          viableRoutes = getViableRoutes(allRoutes);
-
-      computeTotalDistance(response, polyline, map);
-      showSteps(response, markerArray, stepDisplay, map);
+      handleSuccess(response, directionsDisplay, stepDisplay, map);
     } else {
       window.alert('Directions request failed due to ' + status);
     }
@@ -69,16 +79,16 @@ function getViableRoutes(_routes) {
   return viableRoutes;
 }
 
-function computeTotalDistance(result, polyline, map) {
+function computeTotalDistance(route, polyline, map) {
   var totalDist = 0,
       totalTime = 0,
-      myRoute = result.routes[0],
-      myRouteLegsLength = myRoute.legs.length,
+      legs = route.legs,
+      routeLegsLength = legs.length,
       i;
 
-  for (i = 0; i < myRouteLegsLength; i++) {
-    totalDist += myRoute.legs[i].distance.value;
-    totalTime += myRoute.legs[i].duration.value;
+  for (i = 0; i < routeLegsLength; i++) {
+    totalDist += legs[i].distance.value;
+    totalTime += legs[i].duration.value;
   }
 
   putMarkerOnRoute(50, totalDist, totalTime, polyline, map);
