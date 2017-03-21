@@ -36,28 +36,93 @@ function calculateAndDisplayRoute(directionsDisplay, directionsService,
 
   // Retrieve the start and end locations and create a DirectionsRequest using
   // WALKING directions.
-  var origin = document.getElementById('start').value,
-      destination = document.getElementById('end').value,
-      travelMode = document.getElementById('transit-type').value
-
-  var request = {
-    origin: start,
-    destination: end,
-    travelMode: travelMode
-  };
-
-  directionsService.route(request, function(response, status) {
+  directionsService.route({
+    origin: document.getElementById('start').value,
+    destination: document.getElementById('end').value,
+    travelMode: document.getElementById('transit-type').value
+  }, function(response, status) {
     // Route the directions and pass the response to a function to create
     // markers for each step.
     if (status === 'OK') {
       document.getElementById('warnings-panel').innerHTML =
           '<b>' + response.routes[0].warnings + '</b>';
       directionsDisplay.setDirections(response);
+
+      var polyline = createPolyline(response, map);
+      computeTotalDistance(response, polyline, map);
       showSteps(response, markerArray, stepDisplay, map);
     } else {
       window.alert('Directions request failed due to ' + status);
     }
   });
+}
+
+function computeTotalDistance(result, polyline, map) {
+  var totalDist = 0,
+      totalTime = 0,
+      myRoute = result.routes[0],
+      myRouteLegsLength = myRoute.legs.length,
+      i;
+
+  for (i = 0; i < myRouteLegsLength; i++) {
+    totalDist += myRoute.legs[i].distance.value;
+    totalTime += myRoute.legs[i].duration.value;
+  }
+
+  putMarkerOnRoute(50, totalDist, totalTime, polyline, map);
+}
+
+function putMarkerOnRoute(percentage, totalDist, totalTime, polyline, map) {
+  var distance = percentage / 100 * totalDist,
+      time = (percentage / 100 * totalTime / 60).toFixed(2);
+
+  createMarker(polyline.GetPointAtDistance(distance),"time: "+time,"marker", map);
+}
+
+function createMarker(latlng, label, html, map) {
+  p(latlng);
+  var contentString = '<b>'+label+'</b><br>'+html;
+var marker = new google.maps.Marker({
+    position: latlng,
+    map: map,
+    title: label,
+    zIndex: Math.round(latlng.lat()*-100000)<<5
+    });
+    marker.myname = label;
+var infowindow = new google.maps.InfoWindow;
+
+google.maps.event.addListener(marker, 'click', function() {
+    infowindow.setContent(contentString+"<br>"+marker.getPosition().toUrlValue(6));
+    infowindow.open(map,marker);
+    });
+return marker;
+}
+
+function p(x) {
+  console.log(x);
+}
+
+function createPolyline(directionResult, map) {
+  var polyline = new google.maps.Polyline({ path: [] }),
+      route = directionResult.routes[0],
+      path = directionResult.routes[0].overview_path,
+      legs = directionResult.routes[0].legs,
+      i, j;
+
+  for (i=0; i < legs.length; i++) {
+    var steps = legs[i].steps;
+    for (j=0; j < steps.length; j++) {
+      var nextSegment = steps[j].path,
+          k;
+      for (k=0;k<nextSegment.length;k++) {
+        polyline.getPath().push(nextSegment[k]);
+      }
+    }
+  }
+
+  // polyline.setMap(map);
+
+  return polyline;
 }
 
 function showSteps(directionResult, markerArray, stepDisplay, map) {

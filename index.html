@@ -45,19 +45,20 @@
         <option value="WALKING">Walking</option>
       </select>
     <b>Start: </b>
-    <input id="start">
+    <input id="start" value="bound brook">
     </input>
     <b>End: </b>
-    <input id="end">
+    <input id="end" value="brooklyn">
     </input>
     <input value="go" type="submit" id="search-button"></input>
     </div>
     <div id="map"></div>
     &nbsp;
     <div id="warnings-panel"></div>
+
     <script type="text/javascript" src="js/main.js"></script>
-    <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA41pucIkpRGBrkFvprS-O2bN_V-VqrJyo&callback=initMap">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA41pucIkpRGBrkFvprS-O2bN_V-VqrJyo&callback=initMap">
     </script>
+    <script type="text/javascript" src="js/v3_epoly.js"></script>
   </body>
 </html>
