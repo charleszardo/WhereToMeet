@@ -1,12 +1,11 @@
 function initMap() {
   var markerArray = [];
-
   // Instantiate a directions service.
   var directionsService = new google.maps.DirectionsService;
 
   // Create a map and center it on Manhattan.
   var map = new google.maps.Map(document.getElementById('map'), {
-    zoom: 13,
+    zoom: 5,
     center: {lat: 40.771, lng: -73.974}
   });
 
@@ -39,7 +38,8 @@ function calculateAndDisplayRoute(directionsDisplay, directionsService,
   directionsService.route({
     origin: document.getElementById('start').value,
     destination: document.getElementById('end').value,
-    travelMode: document.getElementById('transit-type').value
+    travelMode: document.getElementById('transit-type').value,
+    provideRouteAlternatives: true
   }, function(response, status) {
     // Route the directions and pass the response to a function to create
     // markers for each step.
@@ -57,10 +57,24 @@ function calculateAndDisplayRoute(directionsDisplay, directionsService,
   });
 }
 
+function getRouteDuration(route) {
+  return route.legs[0].duration.value;
+}
+
 function computeTotalDistance(result, polyline, map) {
+  var viableRoutes = [result.routes.shift()],
+      baseTime = getRouteDuration(viableRoutes[0])
+
+  result.routes.forEach(function(route) {
+    if (getRouteDuration(route) < (baseTime * 1.1)) {
+      viableRoutes.push(route);
+    }
+  });
+
+  p(viableRoutes)
   var totalDist = 0,
       totalTime = 0,
-      myRoute = result.routes[0],
+      myRoute = viableRoutes[0],
       myRouteLegsLength = myRoute.legs.length,
       i;
 
@@ -80,7 +94,6 @@ function putMarkerOnRoute(percentage, totalDist, totalTime, polyline, map) {
 }
 
 function createMarker(latlng, label, html, map) {
-  p(latlng);
   var contentString = '<b>'+label+'</b><br>'+html;
 var marker = new google.maps.Marker({
     position: latlng,
