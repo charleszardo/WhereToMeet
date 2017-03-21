@@ -1,29 +1,20 @@
 function initMap() {
-  var markerArray = [];
-  // Instantiate a directions service.
-  var directionsService = new google.maps.DirectionsService;
+  let markerArray = [],
+      directionsService = new google.maps.DirectionsService,
+      map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 5,
+        center: {lat: 40.771, lng: -73.974}
+      }),
+      directionsDisplay = new google.maps.DirectionsRenderer({ map: map }),
+      stepDisplay = new google.maps.InfoWindow;
 
-  // Create a map and center it on Manhattan.
-  var map = new google.maps.Map(document.getElementById('map'), {
-    zoom: 5,
-    center: {lat: 40.771, lng: -73.974}
-  });
-
-  // Create a renderer for directions and bind it to the map.
-  var directionsDisplay = new google.maps.DirectionsRenderer({map: map});
-
-  // Instantiate an info window to hold step text.
-  var stepDisplay = new google.maps.InfoWindow;
-
-  // Display the route between the initial start and end selections.
-  // calculateAndDisplayRoute(
-  //     directionsDisplay, directionsService, markerArray, stepDisplay, map);
-  // Listen to change events from the start and end lists.
-  var onChangeHandler = function() {
+  function onChangeHandler() {
     calculateAndDisplayRoute(
-        directionsDisplay, directionsService, markerArray, stepDisplay, map);
-  };
-  document.getElementById('search-button').addEventListener('click', onChangeHandler);
+      directionsDisplay, directionsService, markerArray, stepDisplay, map);
+  }
+
+  document.getElementById('search-button')
+    .addEventListener('click', onChangeHandler);
 }
 
 function calculateAndDisplayRoute(directionsDisplay, directionsService,
