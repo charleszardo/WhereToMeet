@@ -17,15 +17,13 @@ function initMap() {
     .addEventListener('click', onChangeHandler);
 }
 
-function calculateAndDisplayRoute(directionsDisplay, directionsService,
-    markerArray, stepDisplay, map) {
-  // First, remove any existing markers from the map.
+function calculateAndDisplayRoute(directionsDisplay, directionsService, markerArray, stepDisplay, map) {
+  // remove any existing markers from the map
   for (var i = 0; i < markerArray.length; i++) {
     markerArray[i].setMap(null);
   }
 
-  // Retrieve the start and end locations and create a DirectionsRequest using
-  // WALKING directions.
+  // retrieve the start and end locations and create a DirectionsRequest
   directionsService.route({
     origin: document.getElementById('start').value,
     destination: document.getElementById('end').value,
@@ -52,20 +50,25 @@ function getRouteDuration(route) {
   return route.legs[0].duration.value;
 }
 
-function computeTotalDistance(result, polyline, map) {
+function getViableRoutes(result) {
   var viableRoutes = [result.routes.shift()],
-      baseTime = getRouteDuration(viableRoutes[0])
+      baseTime = getRouteDuration(viableRoutes[0]);
 
+  // routes are viable if within a certain duration of the shortest route
+  // 1.1 is currently being used, could be turned into a UI component
   result.routes.forEach(function(route) {
     if (getRouteDuration(route) < (baseTime * 1.1)) {
       viableRoutes.push(route);
     }
   });
 
-  p(viableRoutes)
+  return viableRoutes;
+}
+
+function computeTotalDistance(result, polyline, map) {
   var totalDist = 0,
       totalTime = 0,
-      myRoute = viableRoutes[0],
+      myRoute = result.routes[0],
       myRouteLegsLength = myRoute.legs.length,
       i;
 
