@@ -37,7 +37,10 @@ function calculateAndDisplayRoute(directionsDisplay, directionsService, markerAr
           '<b>' + response.routes[0].warnings + '</b>';
       directionsDisplay.setDirections(response);
 
-      var polyline = createPolyline(response, map);
+      let allRoutes = response.routes,
+          polyline = createPolyline(response.routes[0], map),
+          viableRoutes = getViableRoutes(allRoutes);
+
       computeTotalDistance(response, polyline, map);
       showSteps(response, markerArray, stepDisplay, map);
     } else {
@@ -50,13 +53,14 @@ function getRouteDuration(route) {
   return route.legs[0].duration.value;
 }
 
-function getViableRoutes(result) {
-  var viableRoutes = [result.routes.shift()],
+function getViableRoutes(_routes) {
+  var routes = _routes.slice(0),
+      viableRoutes = [routes.shift()],
       baseTime = getRouteDuration(viableRoutes[0]);
 
   // routes are viable if within a certain duration of the shortest route
   // 1.1 is currently being used, could be turned into a UI component
-  result.routes.forEach(function(route) {
+  routes.forEach(function(route) {
     if (getRouteDuration(route) < (baseTime * 1.1)) {
       viableRoutes.push(route);
     }
@@ -109,11 +113,10 @@ function p(x) {
   console.log(x);
 }
 
-function createPolyline(directionResult, map) {
+function createPolyline(route, map) {
   var polyline = new google.maps.Polyline({ path: [] }),
-      route = directionResult.routes[0],
-      path = directionResult.routes[0].overview_path,
-      legs = directionResult.routes[0].legs,
+      path = route.overview_path,
+      legs = route.legs,
       i, j;
 
   for (i=0; i < legs.length; i++) {
