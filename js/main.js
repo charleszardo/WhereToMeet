@@ -1,25 +1,26 @@
 let markerArray = [],
-    directionsService = new google.maps.DirectionsService;
-
+    directionsService = new google.maps.DirectionsService,
+    map;
 
 function initMap() {
-    let map = new google.maps.Map(document.getElementById('map'), {
+    map = new google.maps.Map(document.getElementById('map'), {
         zoom: 5,
         center: {lat: 40.771, lng: -73.974}
-      }),
-      directionsDisplay = new google.maps.DirectionsRenderer({ map: map }),
-      stepDisplay = new google.maps.InfoWindow;
+      });
+
+    let directionsDisplay = new google.maps.DirectionsRenderer({ map: map }),
+        stepDisplay = new google.maps.InfoWindow;
 
   function onChangeHandler() {
     calculateAndDisplayRoute(
-      directionsDisplay, stepDisplay, map);
+      directionsDisplay, stepDisplay);
   }
 
   document.getElementById('search-button')
     .addEventListener('click', onChangeHandler);
 }
 
-function handleSuccess(response, directionsDisplay, stepDisplay, map) {
+function handleSuccess(response, directionsDisplay, stepDisplay) {
   let warningMarkup =
   document.getElementById('warnings-panel').innerHTML =
     `<b>${response.routes[0].warnings}</b>`;
@@ -29,17 +30,17 @@ function handleSuccess(response, directionsDisplay, stepDisplay, map) {
       viableRoutes = getViableRoutes(allRoutes);
 
   viableRoutes.forEach(route => {
-    let polyline = createPolyline(route, map),
-        totals = getTotalDistAndTime(route, polyline, map);
+    let polyline = createPolyline(route),
+        totals = getTotalDistAndTime(route, polyline);
 
     p(getDistMidPoint(totals.dist, polyline));
 
   });
 
-  showSteps(response, stepDisplay, map);
+  showSteps(response, stepDisplay);
 }
 
-function calculateAndDisplayRoute(directionsDisplay, stepDisplay, map) {
+function calculateAndDisplayRoute(directionsDisplay, stepDisplay) {
   // remove any existing markers from the map
   for (var i = 0; i < markerArray.length; i++) {
     markerArray[i].setMap(null);
@@ -55,7 +56,7 @@ function calculateAndDisplayRoute(directionsDisplay, stepDisplay, map) {
     // Route the directions and pass the response to a function to create
     // markers for each step.
     if (status === 'OK') {
-      handleSuccess(response, directionsDisplay, stepDisplay, map);
+      handleSuccess(response, directionsDisplay, stepDisplay);
     } else {
       window.alert('Directions request failed due to ' + status);
     }
@@ -88,7 +89,7 @@ function getViableRoutes(_routes) {
   return viableRoutes;
 }
 
-function getTotalDistAndTime(route, map) {
+function getTotalDistAndTime(route) {
   var totalDist = 0,
       totalTime = 0,
       legs = route.legs,
@@ -100,7 +101,7 @@ function getTotalDistAndTime(route, map) {
     totalTime += legs[i].duration.value;
   }
 
-  // putMarkerOnRoute(50, totalDist, totalTime, polyline, map);
+  // putMarkerOnRoute(50, totalDist, totalTime, polyline);
   return { dist: totalDist, time: totalTime };
 }
 
@@ -123,7 +124,7 @@ function getTimeMidPoint(totalTime, dist, polyline) {
   //   // Route the directions and pass the response to a function to create
   //   // markers for each step.
   //   if (status === 'OK') {
-  //     handleSuccess(response, directionsDisplay, stepDisplay, map);
+  //     handleSuccess(response, directionsDisplay, stepDisplay);
   //   } else {
   //     window.alert('Directions request failed due to ' + status);
   //   }
@@ -134,14 +135,14 @@ function getTimeMidPoint(totalTime, dist, polyline) {
   // polyline.GetPointAtDistance(time);
 }
 
-function putMarkerOnRoute(percentage, totalDist, totalTime, polyline, map) {
+function putMarkerOnRoute(percentage, totalDist, totalTime, polyline) {
   var distance = percentage / 100 * totalDist,
       time = (percentage / 100 * totalTime / 60).toFixed(2);
 
-  createMarker(polyline.GetPointAtDistance(distance),"time: "+time,"marker", map);
+  createMarker(polyline.GetPointAtDistance(distance),"time: "+time,"marker");
 }
 
-function createMarker(latlng, label, html, map) {
+function createMarker(latlng, label, html) {
   var contentString = '<b>'+label+'</b><br>'+html;
 var marker = new google.maps.Marker({
     position: latlng,
@@ -163,7 +164,7 @@ function p(x) {
   console.log(x);
 }
 
-function createPolyline(route, map) {
+function createPolyline(route) {
   var polyline = new google.maps.Polyline({ path: [] }),
       path = route.overview_path,
       legs = route.legs,
@@ -185,7 +186,7 @@ function createPolyline(route, map) {
   return polyline;
 }
 
-function showSteps(directionResult, stepDisplay, map) {
+function showSteps(directionResult, stepDisplay) {
   // For each step, place a marker, and add the text to the marker's infowindow.
   // Also attach the marker to an array so we can keep track of it and remove it
   // when calculating new routes.
@@ -196,11 +197,11 @@ function showSteps(directionResult, stepDisplay, map) {
     marker.setMap(map);
     marker.setPosition(myRoute.steps[i].start_location);
     attachInstructionText(
-        stepDisplay, marker, myRoute.steps[i].instructions, map);
+        stepDisplay, marker, myRoute.steps[i].instructions);
   }
 }
 
-function attachInstructionText(stepDisplay, marker, text, map) {
+function attachInstructionText(stepDisplay, marker, text) {
   google.maps.event.addListener(marker, 'click', function() {
     // Open an info window when the marker is clicked on, containing the text
     // of the step.
