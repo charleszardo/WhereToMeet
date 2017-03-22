@@ -16,12 +16,10 @@ function init() {
 
   function onChangeHandler() {
     resetServices();
-    calculateAndDisplayRoute(
-      directionsDisplay, stepDisplay);
+    calculateAndDisplayRoute(directionsDisplay, stepDisplay);
   }
 
-  document.getElementById('search-button')
-    .addEventListener('click', onChangeHandler);
+  document.getElementById('search-button').addEventListener('click', onChangeHandler);
 }
 
 function resetServices() {
@@ -29,46 +27,8 @@ function resetServices() {
   placesService = new google.maps.places.PlacesService(map);
 }
 
-function handleSuccess(response, directionsDisplay, stepDisplay) {
-  let warningMarkup =
-  document.getElementById('warnings-panel').innerHTML =
-    `<b>${response.routes[0].warnings}</b>`;
-  directionsDisplay.setDirections(response);
-
-  let allRoutes = response.routes,
-      viableRoutes = getViableRoutes(allRoutes);
-
-  viableRoutes.forEach(route => {
-    let polyline = createPolyline(route),
-        totals = getTotalDistAndTime(route, polyline),
-        midPoint = getDistMidPoint(totals.dist, polyline);
-
-    getPlacesForCoords(midPoint.lat(), midPoint.lng());
-  });
-
-  showSteps(response, stepDisplay);
-}
-
-function getPlacesForCoords(lat, long) {
-  let loc = new google.maps.LatLng(lat, long),
-      request = {
-        location: loc,
-        radius: '500',
-        query: 'restaurant',
-        openNow: true,
-        rankBy: 'PROMINENCE'
-      };
-
-  placesService.textSearch(request, function(results, status) {
-    console.log(results);
-  });
-}
-
 function calculateAndDisplayRoute(directionsDisplay, stepDisplay) {
-  // remove any existing markers from the map
-  for (var i = 0; i < markerArray.length; i++) {
-    markerArray[i].setMap(null);
-  }
+  removeCurrentMarkers();
 
   // retrieve the start and end locations and create a DirectionsRequest
   directionsService.route({
@@ -76,7 +36,9 @@ function calculateAndDisplayRoute(directionsDisplay, stepDisplay) {
     destination: document.getElementById('end').value,
     travelMode: document.getElementById('transit-type').value,
     provideRouteAlternatives: true
-  }, function(response, status) {
+  }, callback);
+
+  function callback(response, status) {
     // Route the directions and pass the response to a function to create
     // markers for each step.
     if (status === 'OK') {
@@ -84,37 +46,87 @@ function calculateAndDisplayRoute(directionsDisplay, stepDisplay) {
     } else {
       window.alert('Directions request failed due to ' + status);
     }
-  });
+  }
 }
 
-function getRouteDuration(route) {
-  return route.legs[0].duration.value;
+function removeCurrentMarkers() {
+  // removes any existing markers from the map
+  let len = markerArray.length,
+      i;
+
+  for (i = 0; i < len; i++) {
+    markerArray[i].setMap(null);
+  }
+}
+
+function handleSuccess(response, directionsDisplay, stepDisplay) {
+  // let warningMarkup =
+  // document.getElementById('warnings-panel').innerHTML =
+  //   `<b>${response.routes[0].warnings}</b>`,
+
+  // NOTE only use best route for time being
+  let allRoutes = response.routes,
+      viableRoutes = getViableRoutes(allRoutes);
+
+  directionsDisplay.setDirections(response);
+
+  viableRoutes.forEach(route => {
+    let polyline = createPolyline(route),
+        totals = getTotalDistAndTime(route, polyline),
+        midPoint = getDistMidPoint(totals.dist, polyline);
+
+    putMarkerOnRoute(50, totals.dist, totals.time, polyline);
+    getPlacesForCoords(midPoint.lat(), midPoint.lng());
+  });
+
+  // showSteps(response.routes[0], stepDisplay);
 }
 
 function getViableRoutes(_routes) {
-  var routes = _routes.slice(0),
+  // TODO include multiple viable routes (when applicable)
+  let routes = _routes.slice(0),
       viableRoutes = [routes.shift()],
       baseTime = getRouteDuration(viableRoutes[0]);
 
-  // for testing:
-  // viableRoutes.forEach(route => {
-  //   p("ROUTE:");
-  //   p(route.legs[0]);
-  //   p(route.legs[0].steps.forEach(step => p(step.instructions)));
-  // });
   // routes are viable if within a certain duration of the shortest route
   // 1.1 is currently being used, could be turned into a UI component
-  routes.forEach(function(route) {
-    if (getRouteDuration(route) < (baseTime * 1.1)) {
-      viableRoutes.push(route);
-    }
-  });
+  // routes.forEach(function(route) {
+  //   if (getRouteDuration(route) < (baseTime * 1.1)) {
+  //     viableRoutes.push(route);
+  //   }
+  // });
 
+  // viableRoutes is only first route for time being
   return viableRoutes;
 }
 
+function createPolyline(route) {
+  let polyline = new google.maps.Polyline({ path: [] }),
+      path = route.overview_path,
+      legs = route.legs,
+      legsLen = legs.length,
+      i, j;
+
+  for (i=0; i < legsLen; i++) {
+    let steps = legs[i].steps,
+        stepsLen = steps.length;
+
+    for (j=0; j < stepsLen; j++) {
+      let nextSegment = steps[j].path,
+          nextSegmentLen = nextSegment.length,
+          k;
+
+      for (k=0; k< nextSegmentLen; k++) {
+        polyline.getPath().push(nextSegment[k]);
+      }
+    }
+  }
+
+  return polyline;
+}
+
 function getTotalDistAndTime(route) {
-  var totalDist = 0,
+  let totalDist = 0,
       totalTime = 0,
       legs = route.legs,
       routeLegsLength = legs.length,
@@ -125,7 +137,6 @@ function getTotalDistAndTime(route) {
     totalTime += legs[i].duration.value;
   }
 
-  // putMarkerOnRoute(50, totalDist, totalTime, polyline);
   return { dist: totalDist, time: totalTime };
 }
 
@@ -134,10 +145,10 @@ function getDistMidPoint(totalDist, polyline) {
 }
 
 function getTimeMidPoint(totalTime, dist, polyline) {
+  // TODO current plan - binary search.  issue: too many calls to directionsService
+
   let time = (0.5 * totalTime / 60).toFixed(2),
       distMid = dist / 2;
-
-  // TODO: current plan - binary search.  issue: too many calls to directionsService
 
   // directionsService.route({
   //   origin: document.getElementById('start').value,
@@ -159,79 +170,79 @@ function getTimeMidPoint(totalTime, dist, polyline) {
   // polyline.GetPointAtDistance(time);
 }
 
+function getPlacesForCoords(lat, long) {
+  let loc = new google.maps.LatLng(lat, long),
+      request = {
+        location: loc,
+        radius: '500',
+        query: 'restaurant',
+        openNow: true,
+        rankBy: 'PROMINENCE'
+      };
+
+  placesService.textSearch(request, function(results, status) {
+    console.log(results);
+  });
+}
+
+function showSteps(_route, stepDisplay) {
+  // For each step, place a marker and add the text to the marker's infowindow.
+  // Also attach the marker to an array so we can keep track of it and remove it
+  // when calculating new routes.
+  let i;
+  const route = _route.legs[0],
+        steps = route.steps,
+        routeStepsLen = steps.length;
+
+  for (i = 0; i < routeStepsLen; i++) {
+    let marker = markerArray[i] = markerArray[i] || new google.maps.Marker;
+    marker.setMap(map);
+    marker.setPosition(steps[i].start_location);
+    attachInstructionText(stepDisplay, marker, steps[i].instructions);
+  }
+}
+
+function getRouteDuration(route) {
+  return route.legs[0].duration.value;
+}
+
 function putMarkerOnRoute(percentage, totalDist, totalTime, polyline) {
-  var distance = percentage / 100 * totalDist,
-      time = (percentage / 100 * totalTime / 60).toFixed(2);
+  const distance = percentage / 100 * totalDist,
+        time = (percentage / 100 * totalTime / 60).toFixed(2);
 
   createMarker(polyline.GetPointAtDistance(distance),"time: "+time,"marker");
 }
 
-function createMarker(latlng, label, html) {
-  var contentString = '<b>'+label+'</b><br>'+html;
-var marker = new google.maps.Marker({
-    position: latlng,
-    map: map,
-    title: label,
-    zIndex: Math.round(latlng.lat()*-100000)<<5
-    });
-    marker.myname = label;
-var infowindow = new google.maps.InfoWindow;
+function attachInstructionText(stepDisplay, marker, text) {
+  // Open an info window when the marker is clicked on, containing the text
+  // of the step.
+  google.maps.event.addListener(marker, 'click', function() {
+    stepDisplay.setContent(text);
+    stepDisplay.open(map, marker);
+  });
+}
 
-google.maps.event.addListener(marker, 'click', function() {
-    infowindow.setContent(contentString+"<br>"+marker.getPosition().toUrlValue(6));
-    infowindow.open(map,marker);
-    });
-return marker;
+function createMarker(latlng, label, html) {
+  let contentString =  `<b>${label}</b><br>${html}`,
+      marker = new google.maps.Marker({
+        position: latlng,
+        map: map,
+        title: label,
+        myName: label,
+        zIndex: Math.round(latlng.lat()*-100000)<<5
+      }),
+      infowindow = new google.maps.InfoWindow;
+
+  google.maps.event.addListener(marker, 'click', () => {
+      infowindow.setContent(`${contentString}<br>${marker.getPosition().toUrlValue(6)}`);
+      infowindow.open(map, marker);
+  });
+
+  return marker;
 }
 
 function p(x) {
   console.log(x);
-}
-
-function createPolyline(route) {
-  var polyline = new google.maps.Polyline({ path: [] }),
-      path = route.overview_path,
-      legs = route.legs,
-      i, j;
-
-  for (i=0; i < legs.length; i++) {
-    var steps = legs[i].steps;
-    for (j=0; j < steps.length; j++) {
-      var nextSegment = steps[j].path,
-          k;
-      for (k=0;k<nextSegment.length;k++) {
-        polyline.getPath().push(nextSegment[k]);
-      }
-    }
-  }
-
-  // polyline.setMap(map);
-
-  return polyline;
-}
-
-function showSteps(directionResult, stepDisplay) {
-  // For each step, place a marker, and add the text to the marker's infowindow.
-  // Also attach the marker to an array so we can keep track of it and remove it
-  // when calculating new routes.
-  var myRoute = directionResult.routes[0].legs[0];
-
-  for (var i = 0; i < myRoute.steps.length; i++) {
-    var marker = markerArray[i] = markerArray[i] || new google.maps.Marker;
-    marker.setMap(map);
-    marker.setPosition(myRoute.steps[i].start_location);
-    attachInstructionText(
-        stepDisplay, marker, myRoute.steps[i].instructions);
-  }
-}
-
-function attachInstructionText(stepDisplay, marker, text) {
-  google.maps.event.addListener(marker, 'click', function() {
-    // Open an info window when the marker is clicked on, containing the text
-    // of the step.
-    stepDisplay.setContent(text);
-    stepDisplay.open(map, marker);
-  });
 }
 
 init();
