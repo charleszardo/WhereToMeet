@@ -28,9 +28,8 @@ function handleSuccess(response, directionsDisplay, stepDisplay, map) {
       viableRoutes = getViableRoutes(allRoutes);
 
   viableRoutes.forEach(route => {
-    let polyline = createPolyline(route, map);
-
-    computeTotalDistance(route, polyline, map);
+    let polyline = createPolyline(route, map),
+        totals = getTotalDistAndTime(route, polyline, map);
   });
 
   showSteps(response, stepDisplay, map);
@@ -68,6 +67,12 @@ function getViableRoutes(_routes) {
       viableRoutes = [routes.shift()],
       baseTime = getRouteDuration(viableRoutes[0]);
 
+  // for testing:
+  // viableRoutes.forEach(route => {
+  //   p("ROUTE:");
+  //   p(route.legs[0]);
+  //   p(route.legs[0].steps.forEach(step => p(step.instructions)));
+  // });
   // routes are viable if within a certain duration of the shortest route
   // 1.1 is currently being used, could be turned into a UI component
   routes.forEach(function(route) {
@@ -79,7 +84,7 @@ function getViableRoutes(_routes) {
   return viableRoutes;
 }
 
-function computeTotalDistance(route, polyline, map) {
+function getTotalDistAndTime(route, map) {
   var totalDist = 0,
       totalTime = 0,
       legs = route.legs,
@@ -91,7 +96,18 @@ function computeTotalDistance(route, polyline, map) {
     totalTime += legs[i].duration.value;
   }
 
-  putMarkerOnRoute(50, totalDist, totalTime, polyline, map);
+  // putMarkerOnRoute(50, totalDist, totalTime, polyline, map);
+  return { totalDist: totalDist, totalTime: totalTime };
+}
+
+function getDistMidPoint(totalDist, polyline) {
+  return polyline.GetPointAtDistance(0.5 * totalDist);
+}
+
+function getTimeMidPoint(totalTime, polyline) {
+  var time = (0.5 * totalTime / 60).toFixed(2);
+  p(polyline.getPath());
+  // polyline.GetPointAtDistance(time);
 }
 
 function putMarkerOnRoute(percentage, totalDist, totalTime, polyline, map) {
@@ -145,7 +161,7 @@ function createPolyline(route, map) {
   return polyline;
 }
 
-function showSteps(directionResult, markerArray, stepDisplay, map) {
+function showSteps(directionResult, stepDisplay, map) {
   // For each step, place a marker, and add the text to the marker's infowindow.
   // Also attach the marker to an array so we can keep track of it and remove it
   // when calculating new routes.
