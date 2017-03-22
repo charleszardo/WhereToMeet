@@ -1,8 +1,9 @@
-let markerArray = [];
+let markerArray = [],
+    directionsService = new google.maps.DirectionsService;
+
 
 function initMap() {
-  let directionsService = new google.maps.DirectionsService,
-      map = new google.maps.Map(document.getElementById('map'), {
+    let map = new google.maps.Map(document.getElementById('map'), {
         zoom: 5,
         center: {lat: 40.771, lng: -73.974}
       }),
@@ -11,7 +12,7 @@ function initMap() {
 
   function onChangeHandler() {
     calculateAndDisplayRoute(
-      directionsDisplay, directionsService, stepDisplay, map);
+      directionsDisplay, stepDisplay, map);
   }
 
   document.getElementById('search-button')
@@ -30,12 +31,15 @@ function handleSuccess(response, directionsDisplay, stepDisplay, map) {
   viableRoutes.forEach(route => {
     let polyline = createPolyline(route, map),
         totals = getTotalDistAndTime(route, polyline, map);
+
+    p(getDistMidPoint(totals.dist, polyline));
+
   });
 
   showSteps(response, stepDisplay, map);
 }
 
-function calculateAndDisplayRoute(directionsDisplay, directionsService, stepDisplay, map) {
+function calculateAndDisplayRoute(directionsDisplay, stepDisplay, map) {
   // remove any existing markers from the map
   for (var i = 0; i < markerArray.length; i++) {
     markerArray[i].setMap(null);
@@ -97,16 +101,36 @@ function getTotalDistAndTime(route, map) {
   }
 
   // putMarkerOnRoute(50, totalDist, totalTime, polyline, map);
-  return { totalDist: totalDist, totalTime: totalTime };
+  return { dist: totalDist, time: totalTime };
 }
 
 function getDistMidPoint(totalDist, polyline) {
   return polyline.GetPointAtDistance(0.5 * totalDist);
 }
 
-function getTimeMidPoint(totalTime, polyline) {
-  var time = (0.5 * totalTime / 60).toFixed(2);
-  p(polyline.getPath());
+function getTimeMidPoint(totalTime, dist, polyline) {
+  let time = (0.5 * totalTime / 60).toFixed(2),
+      distMid = dist / 2;
+
+  // TODO: current plan - binary search.  issue: too many calls to directionsService
+
+  // directionsService.route({
+  //   origin: document.getElementById('start').value,
+  //   destination: document.getElementById('end').value,
+  //   travelMode: document.getElementById('transit-type').value,
+  //   provideRouteAlternatives: true
+  // }, function(response, status) {
+  //   // Route the directions and pass the response to a function to create
+  //   // markers for each step.
+  //   if (status === 'OK') {
+  //     handleSuccess(response, directionsDisplay, stepDisplay, map);
+  //   } else {
+  //     window.alert('Directions request failed due to ' + status);
+  //   }
+  // });
+  //
+  // p(polyline.getPath());
+
   // polyline.GetPointAtDistance(time);
 }
 
@@ -184,3 +208,5 @@ function attachInstructionText(stepDisplay, marker, text, map) {
     stepDisplay.open(map, marker);
   });
 }
+
+initMap();
