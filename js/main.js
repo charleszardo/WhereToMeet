@@ -1,23 +1,32 @@
 let markerArray = [],
-    directionsService = new google.maps.DirectionsService,
-    map;
+    map
+    directionsService,
+    placesService;
 
-function initMap() {
+function init() {
     map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 5,
-        center: {lat: 40.771, lng: -73.974}
-      });
+      zoom: 5,
+      center: {lat: 40.771, lng: -73.974}
+    });
+
+    resetServices();
 
     let directionsDisplay = new google.maps.DirectionsRenderer({ map: map }),
         stepDisplay = new google.maps.InfoWindow;
 
   function onChangeHandler() {
+    resetServices();
     calculateAndDisplayRoute(
       directionsDisplay, stepDisplay);
   }
 
   document.getElementById('search-button')
     .addEventListener('click', onChangeHandler);
+}
+
+function resetServices() {
+  directionsService = new google.maps.DirectionsService;
+  placesService = new google.maps.places.PlacesService(map);
 }
 
 function handleSuccess(response, directionsDisplay, stepDisplay) {
@@ -210,4 +219,4 @@ function attachInstructionText(stepDisplay, marker, text) {
   });
 }
 
-initMap();
+init();
