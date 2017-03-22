@@ -1,5 +1,5 @@
 let markerArray = [],
-    map
+    map,
     directionsService,
     placesService;
 
@@ -40,13 +40,28 @@ function handleSuccess(response, directionsDisplay, stepDisplay) {
 
   viableRoutes.forEach(route => {
     let polyline = createPolyline(route),
-        totals = getTotalDistAndTime(route, polyline);
+        totals = getTotalDistAndTime(route, polyline),
+        midPoint = getDistMidPoint(totals.dist, polyline);
 
-    p(getDistMidPoint(totals.dist, polyline));
-
+    getPlacesForCoords(midPoint.lat(), midPoint.lng());
   });
 
   showSteps(response, stepDisplay);
+}
+
+function getPlacesForCoords(lat, long) {
+  let loc = new google.maps.LatLng(lat, long),
+      request = {
+        location: loc,
+        radius: '500',
+        query: 'restaurant',
+        openNow: true,
+        rankBy: 'PROMINENCE'
+      };
+
+  placesService.textSearch(request, function(results, status) {
+    console.log(results);
+  });
 }
 
 function calculateAndDisplayRoute(directionsDisplay, stepDisplay) {
