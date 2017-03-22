@@ -12,7 +12,15 @@ function init() {
     resetServices();
 
     let directionsDisplay = new google.maps.DirectionsRenderer({ map: map }),
-        stepDisplay = new google.maps.InfoWindow;
+        stepDisplay = new google.maps.InfoWindow,
+        startAutocomplete = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */ (
+              document.getElementById('start')), {
+        }),
+        endAutocomplete = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */ (
+              document.getElementById('end')), {
+        });
 
   function onChangeHandler() {
     resetServices();
